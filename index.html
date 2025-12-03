@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>Multi-Year Timetable Generator</title>
+  <title>Timetable Generator – 3rd, 5th, 7th Sem</title>
   <style>
     :root {
       --bg: #050816;
@@ -376,12 +376,15 @@
       th:first-child, td:first-child { position: static; }
     }
   </style>
+
+  <!-- XLSX library for Excel export -->
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 </head>
 <body>
   <div class="container">
-    <h1>Timetable Generator <span>3 Years</span></h1>
+    <h1>Timetable Generator <span>3rd · 5th · 7th Sem</span></h1>
     <div class="subheading">
-      Auto-arranges 2nd, 3rd, and 4th year timetables with no teacher overlaps and OE / lab rules.
+      Generates 3rd, 5th, 7th sem timetables with OE rules, labs only in afternoon & teacher clash checks.
     </div>
 
     <div class="time-structure">
@@ -391,75 +394,81 @@
       <div class="note">
         Rules:
         <ul>
-          <li>Open Elective (OE) only on <b>Mon/Wed/Fri 8–9 AM</b>.</li>
-          <li>Labs only in <b>afternoon (2–5 PM) Mon–Fri</b>, continuous block (1–3 hours).</li>
-          <li>Same teacher: <b>no overlapping classes</b> across years and <b>no back-to-back slots</b>.</li>
-          <li>Checkbox: allow / disallow <b>same subject twice in a day</b>.</li>
+          <li>OE only on <b>Mon / Wed / Fri · 8–9 AM</b>.</li>
+          <li>Labs only in <b>afternoon (2–5 PM) Mon–Fri</b>, continuous 2 or 3 hour blocks.</li>
+          <li>5th & 7th sem: <b>no lectures in afternoon</b> (only labs).</li>
+          <li>Teacher clash checked only if you fill teacher name (empty = ignored).</li>
         </ul>
       </div>
     </div>
 
-    <h2>Year Configuration (8 subjects per year)</h2>
+    <h2>Semester Configuration</h2>
 
+    <!-- 3rd sem -->
     <div class="year-block">
       <div class="year-header">
-        <h3>2nd Year</h3>
-        <span class="year-pill">8 subjects · 3 to 6 hrs / week each (you decide)</span>
+        <h3>3rd Sem</h3>
+        <span class="year-pill">Odd 2023–24</span>
       </div>
       <div class="row">
         <div class="col">
-          <label for="year2Name">Display name:</label>
-          <input id="year2Name" type="text" value="2nd Year ETE" />
+          <label for="year3Name">Display / sheet name:</label>
+          <input id="year3Name" type="text" value="3rd Sem ETE" />
         </div>
         <div class="col">
           <label>Subjects count:</label>
-          <input type="text" value="8 (fixed)" disabled />
-        </div>
-      </div>
-      <div id="subjectsContainer2"></div>
-    </div>
-
-    <div class="year-block">
-      <div class="year-header">
-        <h3>3rd Year</h3>
-        <span class="year-pill">8 subjects · with labs / OE / PE</span>
-      </div>
-      <div class="row">
-        <div class="col">
-          <label for="year3Name">Display name:</label>
-          <input id="year3Name" type="text" value="3rd Year ETE" />
-        </div>
-        <div class="col">
-          <label>Subjects count:</label>
-          <input type="text" value="8 (fixed)" disabled />
+          <input type="text" value="8" disabled />
         </div>
       </div>
       <div id="subjectsContainer3"></div>
     </div>
 
+    <!-- 5th sem -->
     <div class="year-block">
       <div class="year-header">
-        <h3>4th Year</h3>
-        <span class="year-pill">8 subjects · project / OE / PE</span>
+        <h3>5th Sem</h3>
+        <span class="year-pill">Odd 2024–25</span>
       </div>
       <div class="row">
         <div class="col">
-          <label for="year4Name">Display name:</label>
-          <input id="year4Name" type="text" value="4th Year ETE" />
+          <label for="year5Name">Display / sheet name:</label>
+          <input id="year5Name" type="text" value="5th Sem ETE" />
         </div>
         <div class="col">
           <label>Subjects count:</label>
-          <input type="text" value="8 (fixed)" disabled />
+          <input type="text" value="8" disabled />
         </div>
       </div>
-      <div id="subjectsContainer4"></div>
+      <div id="subjectsContainer5"></div>
+    </div>
+
+    <!-- 7th sem -->
+    <div class="year-block">
+      <div class="year-header">
+        <h3>7th Sem</h3>
+        <span class="year-pill">Odd 2025–26</span>
+      </div>
+      <div class="row">
+        <div class="col">
+          <label for="year7Name">Display / sheet name:</label>
+          <input id="year7Name" type="text" value="7th Sem ETE" />
+        </div>
+        <div class="col">
+          <label>Subjects count:</label>
+          <input type="text" value="6 (fixed)" disabled />
+        </div>
+      </div>
+      <div id="subjectsContainer7"></div>
     </div>
 
     <button id="refreshBtn" class="secondary">
       <span class="btn-icon">🔁</span> Refresh Subject Forms
     </button>
     <button id="generateBtn">
-      <span class="btn-icon">⚡</span> Generate Timetables (All 3 Years)
+      <span class="btn-icon">⚡</span> Generate Timetables
+    </button>
+    <button id="downloadBtn" class="secondary" style="display:none;">
+      <span class="btn-icon">📥</span> Download Excel
     </button>
 
     <div id="timetableContainer"></div>
@@ -469,20 +478,25 @@
   </div>
 
   <script>
-    const SUBJECTS_PER_YEAR = 8;
+    const SUBJECTS_PER_YEAR = { "3rd": 8, "5th": 8, "7th": 6 };
     const DAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
-    const YEARS = ["2nd", "3rd", "4th"];
+    const DAY_FULL = {
+      Mon: "Monday", Tue: "Tuesday", Wed: "Wednesday",
+      Thu: "Thursday", Fri: "Friday", Sat: "Saturday"
+    };
+    const YEARS = ["3rd", "5th", "7th"];
+    const SEM_NUMBER = { "3rd": 3, "5th": 5, "7th": 7 };
 
     const ROWS = [
-      { id: "8-9",         label: "8:00 - 9:00",    type: "class", period: "morning" },
-      { id: "9-10",        label: "9:00 - 10:00",   type: "class", period: "morning" },
+      { id: "8-9",         label: "8:00 - 9:00",    type: "class", period: "morning",  start: "09:00", end: "10:00" },
+      { id: "9-10",        label: "9:00 - 10:00",   type: "class", period: "morning",  start: "10:00", end: "11:00" },
       { id: "10-10:30",    label: "10:00 - 10:30",  type: "break" },
-      { id: "10:30-11:30", label: "10:30 - 11:30",  type: "class", period: "morning" },
-      { id: "11:30-12:30", label: "11:30 - 12:30",  type: "class", period: "morning" },
+      { id: "10:30-11:30", label: "10:30 - 11:30",  type: "class", period: "morning",  start: "10:30", end: "11:30" },
+      { id: "11:30-12:30", label: "11:30 - 12:30",  type: "class", period: "morning",  start: "11:30", end: "12:30" },
       { id: "12:30-2",     label: "12:30 - 2:00",   type: "break" },
-      { id: "2-3",         label: "2:00 - 3:00",    type: "class", period: "afternoon" },
-      { id: "3-4",         label: "3:00 - 4:00",    type: "class", period: "afternoon" },
-      { id: "4-5",         label: "4:00 - 5:00",    type: "class", period: "afternoon" }
+      { id: "2-3",         label: "2:00 - 3:00",    type: "class", period: "afternoon",start: "14:00", end: "15:00" },
+      { id: "3-4",         label: "3:00 - 4:00",    type: "class", period: "afternoon",start: "15:00", end: "16:00" },
+      { id: "4-5",         label: "4:00 - 5:00",    type: "class", period: "afternoon",start: "16:00", end: "17:00" }
     ];
 
     function isSlotAvailableOnDay(day, rowIndex) {
@@ -490,22 +504,46 @@
       return true;
     }
 
-    const refreshBtn = document.getElementById("refreshBtn");
+    const refreshBtn  = document.getElementById("refreshBtn");
     const generateBtn = document.getElementById("generateBtn");
+    const downloadBtn = document.getElementById("downloadBtn");
 
+    let lastTimetable = null;
+    let lastSubjectsMeta = null;
+
+    // --------- UI: subject forms ----------
     function buildSubjectFormsForYear(yearKey, containerId) {
       const container = document.getElementById(containerId);
       container.innerHTML = "";
 
-      for (let i = 1; i <= SUBJECTS_PER_YEAR; i++) {
+      const count = SUBJECTS_PER_YEAR[yearKey] || 8;
+
+      for (let i = 1; i <= count; i++) {
         const card = document.createElement("div");
         card.className = "subject-card";
         card.dataset.year = yearKey;
 
         const title = document.createElement("div");
         title.className = "subject-title";
-        title.textContent = `${yearKey} Year · Subject ${i}`;
+        title.textContent = `${yearKey} Sem · Subject ${i}`;
         card.appendChild(title);
+
+        const row0 = document.createElement("div");
+        row0.className = "row";
+        const colCode = document.createElement("div");
+        colCode.className = "col";
+        colCode.innerHTML = `
+          <label>Subject Code:</label>
+          <input type="text" class="sub-code" placeholder="e.g., S3ETMAT" />
+        `;
+        const colRoom = document.createElement("div");
+        colRoom.className = "col";
+        colRoom.innerHTML = `
+          <label>Room (optional):</label>
+          <input type="text" class="sub-room" placeholder="e.g., B-204" />
+        `;
+        row0.appendChild(colCode);
+        row0.appendChild(colRoom);
 
         const row1 = document.createElement("div");
         row1.className = "row";
@@ -514,14 +552,14 @@
         colName.className = "col";
         colName.innerHTML = `
           <label>Subject Name:</label>
-          <input type="text" class="sub-name" placeholder="e.g., DSP, OE-1, VLSI" />
+          <input type="text" class="sub-name" placeholder="Subject name" />
         `;
 
         const colTeacher = document.createElement("div");
         colTeacher.className = "col";
         colTeacher.innerHTML = `
           <label>Teacher Name:</label>
-          <input type="text" class="sub-teacher" placeholder="e.g., Dr. XYZ" />
+          <input type="text" class="sub-teacher" placeholder="Teacher" />
         `;
 
         row1.appendChild(colName);
@@ -589,14 +627,13 @@
             <div class="col">
               <label>Lab duration (hours):</label>
               <select class="sub-lab-duration">
-                <option value="1">1 hour</option>
                 <option value="2" selected>2 hours</option>
                 <option value="3">3 hours</option>
               </select>
             </div>
           </div>
           <div class="note">
-            Labs will be placed in afternoon (2–5 PM, Mon–Fri) as continuous blocks.
+            Labs will be placed in afternoon (2–5 PM · Mon–Fri) as continuous 2 or 3 hour blocks.
           </div>
         `;
 
@@ -604,19 +641,19 @@
           labExtra.style.display = e.target.value === "yes" ? "block" : "none";
         });
 
+        card.appendChild(row0);
         card.appendChild(row1);
         card.appendChild(row2);
         card.appendChild(row3);
         card.appendChild(labExtra);
-
         container.appendChild(card);
       }
     }
 
     function refreshAllSubjectForms() {
-      buildSubjectFormsForYear("2nd", "subjectsContainer2");
       buildSubjectFormsForYear("3rd", "subjectsContainer3");
-      buildSubjectFormsForYear("4th", "subjectsContainer4");
+      buildSubjectFormsForYear("5th", "subjectsContainer5");
+      buildSubjectFormsForYear("7th", "subjectsContainer7");
     }
 
     refreshBtn.addEventListener("click", () => {
@@ -624,15 +661,21 @@
       populateExampleData();
     });
 
+    // ---------- Read subjects ----------
     function readAllSubjects() {
       const cards = document.querySelectorAll(".subject-card");
       const subjects = [];
+      const meta = {};
+
       cards.forEach(card => {
         const year = card.dataset.year;
         const name = (card.querySelector(".sub-name").value || "").trim() || "Unnamed";
-        const teacher = (card.querySelector(".sub-teacher").value || "").trim() || "Unknown";
+        const teacher = (card.querySelector(".sub-teacher").value || "").trim();
         const type = card.querySelector(".sub-type").value;
         const lecturesPerWeek = parseInt(card.querySelector(".sub-lectures").value || "0", 10);
+
+        const code = (card.querySelector(".sub-code").value || "").trim();
+        const room = (card.querySelector(".sub-room").value || "").trim();
 
         const hasLab = card.querySelector(".sub-has-lab").value === "yes";
         let labSessionsPerWeek = 0;
@@ -640,6 +683,7 @@
         if (hasLab) {
           labSessionsPerWeek = parseInt(card.querySelector(".sub-labs-per-week").value || "0", 10);
           labDurationSlots = parseInt(card.querySelector(".sub-lab-duration").value || "0", 10);
+          if (labDurationSlots < 2) labDurationSlots = 2;
         }
 
         const allowTwicePerDay = card.querySelector(".sub-allow-twice").checked;
@@ -654,10 +698,15 @@
           labDurationSlots,
           allowTwicePerDay
         });
+
+        meta[`${year}|${name}`] = { code, room };
       });
+
+      lastSubjectsMeta = meta;
       return subjects;
     }
 
+    // ---------- Scheduling ----------
     function generateTimetables(subjects) {
       const logLines = [];
 
@@ -671,11 +720,13 @@
 
       const teacherBusy = {};
       function isTeacherBusy(teacher, day, rowIndex) {
+        if (!teacher) return false;
         return teacherBusy[teacher] &&
                teacherBusy[teacher][day] &&
                teacherBusy[teacher][day][rowIndex];
       }
       function setTeacherBusy(teacher, day, rowIndex) {
+        if (!teacher) return;
         if (!teacherBusy[teacher]) teacherBusy[teacher] = {};
         if (!teacherBusy[teacher][day]) teacherBusy[teacher][day] = {};
         teacherBusy[teacher][day][rowIndex] = true;
@@ -709,16 +760,6 @@
               if (timetable[year][day][idx] !== null) { ok = false; break; }
               if (isTeacherBusy(subject.teacher, day, idx)) { ok = false; break; }
             }
-
-            const beforeIdx = rowIndex - 1;
-            const afterIdx  = rowIndex + subject.labDurationSlots;
-            if (beforeIdx >= 0 && ROWS[beforeIdx].type === "class") {
-              if (isTeacherBusy(subject.teacher, day, beforeIdx)) ok = false;
-            }
-            if (afterIdx < ROWS.length && ROWS[afterIdx].type === "class") {
-              if (isTeacherBusy(subject.teacher, day, afterIdx)) ok = false;
-            }
-
             if (ok) {
               candidates.push({ year, day, startRowIndex: rowIndex });
             }
@@ -727,13 +768,15 @@
         return candidates;
       }
 
+      // Place labs first
       subjects.forEach(subject => {
         if (!subject.labSessionsPerWeek || !subject.labDurationSlots) return;
 
         for (let s = 0; s < subject.labSessionsPerWeek; s++) {
           const candidates = findLabCandidates(subject);
+          const tName = subject.teacher || "NA";
           if (candidates.length === 0) {
-            logLines.push(`⚠️ [LAB] Could not place lab for "${subject.name}" (${subject.year}, ${subject.teacher}) session ${s+1}/${subject.labSessionsPerWeek}.`);
+            logLines.push(`⚠️ [LAB] Could not place lab for "${subject.name}" (${subject.year}, ${tName}) session ${s+1}/${subject.labSessionsPerWeek}.`);
             continue;
           }
           const choice = candidates[Math.floor(Math.random() * candidates.length)];
@@ -748,7 +791,7 @@
             };
             setTeacherBusy(subject.teacher, choice.day, idx);
           }
-          logLines.push(`✅ [LAB] "${subject.name}" (${subject.year}, ${subject.teacher}) on ${choice.day} at ${ROWS[choice.startRowIndex].label} for ${subject.labDurationSlots} hour(s).`);
+          logLines.push(`✅ [LAB] "${subject.name}" (${subject.year}, ${tName}) on ${choice.day} at ${ROWS[choice.startRowIndex].label} for ${subject.labDurationSlots} hour(s).`);
         }
       });
 
@@ -766,15 +809,10 @@
               if (row.id !== "8-9") continue;
             }
 
+            if (["5th","7th"].includes(year) && row.period === "afternoon") continue;
+
             if (timetable[year][day][rowIndex] !== null) continue;
             if (isTeacherBusy(subject.teacher, day, rowIndex)) continue;
-
-            const prevIdx = rowIndex - 1;
-            const nextIdx = rowIndex + 1;
-            if (prevIdx >= 0 && ROWS[prevIdx].type === "class" &&
-                isTeacherBusy(subject.teacher, day, prevIdx)) continue;
-            if (nextIdx < ROWS.length && ROWS[nextIdx].type === "class" &&
-                isTeacherBusy(subject.teacher, day, nextIdx)) continue;
 
             const currentCount = subjectPerDay[year][day][subject.name] || 0;
             if (!subject.allowTwicePerDay && currentCount >= 1) continue;
@@ -785,53 +823,62 @@
         return candidates;
       }
 
-      subjects.forEach(subject => {
-        for (let s = 0; s < subject.lecturesPerWeek; s++) {
-          const candidates = findLectureCandidates(subject);
-          if (candidates.length === 0) {
-            logLines.push(`⚠️ [LECTURE] Could not place lecture for "${subject.name}" (${subject.year}, ${subject.teacher}) class ${s+1}/${subject.lecturesPerWeek}.`);
-            continue;
-          }
-          const choice = candidates[Math.floor(Math.random() * candidates.length)];
-          timetable[choice.year][choice.day][choice.rowIndex] = {
-            subjectName: subject.name,
-            type: subject.type,
-            isLab: false,
-            teacher: subject.teacher,
-            year: subject.year
-          };
-          setTeacherBusy(subject.teacher, choice.day, choice.rowIndex);
+      // ---- Place lectures (OEs first) ----
+      function placeLectureList(list) {
+        list.forEach(subject => {
+          for (let s = 0; s < subject.lecturesPerWeek; s++) {
+            const candidates = findLectureCandidates(subject);
+            const tName = subject.teacher || "NA";
+            if (candidates.length === 0) {
+              logLines.push(`⚠️ [LECTURE] Could not place lecture for "${subject.name}" (${subject.year}, ${tName}) class ${s+1}/${subject.lecturesPerWeek}.`);
+              continue;
+            }
+            const choice = candidates[Math.floor(Math.random() * candidates.length)];
+            timetable[choice.year][choice.day][choice.rowIndex] = {
+              subjectName: subject.name,
+              type: subject.type,
+              isLab: false,
+              teacher: subject.teacher,
+              year: subject.year
+            };
+            setTeacherBusy(subject.teacher, choice.day, choice.rowIndex);
 
-          const year = choice.year;
-          const day = choice.day;
-          if (!subjectPerDay[year][day][subject.name]) {
-            subjectPerDay[year][day][subject.name] = 0;
-          }
-          subjectPerDay[year][day][subject.name]++;
+            const year = choice.year;
+            const day = choice.day;
+            if (!subjectPerDay[year][day][subject.name]) {
+              subjectPerDay[year][day][subject.name] = 0;
+            }
+            subjectPerDay[year][day][subject.name]++;
 
-          logLines.push(`✅ [LECTURE] "${subject.name}" (${subject.year}, ${subject.teacher}) on ${choice.day} at ${ROWS[choice.rowIndex].label}.`);
-        }
-      });
+            logLines.push(`✅ [LECTURE] "${subject.name}" (${subject.year}, ${tName}) on ${choice.day} at ${ROWS[choice.rowIndex].label}.`);
+          }
+        });
+      }
+
+      const oeSubjects    = subjects.filter(s => s.type === "oe");
+      const otherSubjects = subjects.filter(s => s.type !== "oe");
+
+      placeLectureList(oeSubjects);
+      placeLectureList(otherSubjects);
 
       return { timetable, log: logLines.join("\n") };
     }
 
+    // ---------- Render tables (for on-screen view) ----------
     function createTableForYear(yearKey, yearLabel, timetableForYear) {
       const wrapper = document.createElement("div");
       wrapper.className = "tt-year-wrapper";
 
       const h = document.createElement("h3");
-      h.textContent = yearLabel || (yearKey + " Year");
+      h.textContent = yearLabel || (yearKey + " Sem");
       wrapper.appendChild(h);
 
       const table = document.createElement("table");
-
       const thead = document.createElement("thead");
       const headerRow = document.createElement("tr");
       const thEmpty = document.createElement("th");
       thEmpty.textContent = "Time / Day";
       headerRow.appendChild(thEmpty);
-
       DAYS.forEach(day => {
         const th = document.createElement("th");
         th.textContent = day;
@@ -841,10 +888,8 @@
       table.appendChild(thead);
 
       const tbody = document.createElement("tbody");
-
       ROWS.forEach((row, rowIndex) => {
         const tr = document.createElement("tr");
-
         const timeTd = document.createElement("td");
         timeTd.textContent = row.label;
         tr.appendChild(timeTd);
@@ -872,15 +917,16 @@
             td.className = "slot-empty";
           } else {
             const span = document.createElement("span");
+            const tName = entry.teacher || "NA";
             span.textContent =
               entry.subjectName +
               (entry.isLab ? " (Lab)" : "") +
-              "\n[" + entry.teacher + "]";
+              "\n[" + tName + "]";
             span.classList.add("subject-pill");
             if (entry.type === "core") span.classList.add("subject-core");
-            if (entry.type === "oe") span.classList.add("subject-oe");
-            if (entry.type === "pe") span.classList.add("subject-pe");
-            if (entry.isLab) span.classList.add("subject-lab");
+            if (entry.type === "oe")   span.classList.add("subject-oe");
+            if (entry.type === "pe")   span.classList.add("subject-pe");
+            if (entry.isLab)           span.classList.add("subject-lab");
             td.appendChild(span);
           }
 
@@ -900,9 +946,9 @@
       container.innerHTML = "";
 
       const yearLabels = {
-        "2nd": document.getElementById("year2Name").value.trim() || "2nd Year",
-        "3rd": document.getElementById("year3Name").value.trim() || "3rd Year",
-        "4th": document.getElementById("year4Name").value.trim() || "4th Year"
+        "3rd": document.getElementById("year3Name").value.trim() || "3rd Sem",
+        "5th": document.getElementById("year5Name").value.trim() || "5th Sem",
+        "7th": document.getElementById("year7Name").value.trim() || "7th Sem"
       };
 
       YEARS.forEach(yearKey => {
@@ -913,11 +959,14 @@
       });
     }
 
+    // ---------- Demo subjects ----------
     function assignSubject(card, config) {
-      card.querySelector(".sub-name").value = config.name;
-      card.querySelector(".sub-teacher").value = config.teacher;
-      card.querySelector(".sub-type").value = config.type;
-      card.querySelector(".sub-lectures").value = config.lecturesPerWeek;
+      card.querySelector(".sub-name").value = config.name || "";
+      card.querySelector(".sub-code").value = config.code || "";
+      card.querySelector(".sub-room").value = config.room || "";
+      card.querySelector(".sub-teacher").value = "";
+      card.querySelector(".sub-type").value = config.type || "core";
+      card.querySelector(".sub-lectures").value = config.lecturesPerWeek ?? 3;
 
       const hasLabSelect = card.querySelector(".sub-has-lab");
       if (config.labSessionsPerWeek && config.labDurationSlots) {
@@ -935,43 +984,41 @@
 
     function populateExampleData() {
       const allCards = document.querySelectorAll(".subject-card");
-      const cardsByYear = { "2nd": [], "3rd": [], "4th": [] };
+      const cardsByYear = { "3rd": [], "5th": [], "7th": [] };
       allCards.forEach(c => cardsByYear[c.dataset.year].push(c));
 
-      const demo2 = [
-        { name: "Applied Mathematics-II", teacher: "Dr. Rao", type: "core", lecturesPerWeek: 4 },
-        { name: "Basic Electronics", teacher: "Dr. Mehta", type: "core", lecturesPerWeek: 3, labSessionsPerWeek: 1, labDurationSlots: 2 },
-        { name: "Digital Logic Design", teacher: "Prof. Kiran", type: "core", lecturesPerWeek: 3, labSessionsPerWeek: 1, labDurationSlots: 2 },
-        { name: "Data Structures", teacher: "Prof. Ananya", type: "core", lecturesPerWeek: 3, labSessionsPerWeek: 1, labDurationSlots: 2 },
-        { name: "Open Elective: Python Basics", teacher: "Dr. Neha", type: "oe", lecturesPerWeek: 3 },
-        { name: "Signals & Systems", teacher: "Dr. Riya", type: "core", lecturesPerWeek: 3 },
-        { name: "Communication Theory", teacher: "Dr. Arjun", type: "core", lecturesPerWeek: 3 },
-        { name: "Professional Communication", teacher: "Ms. Priya", type: "pe", lecturesPerWeek: 2 }
+      const demo3rd = [
+        { code: "S3ETMAT",  name: "Mathematical Foundations for Communication Systems", type: "core", lecturesPerWeek: 3 },
+        { code: "S3ETESC01",name: "Computer Organization and Architecture",           type: "core", lecturesPerWeek: 3 },
+        { code: "S3ETI01",  name: "Signals and Systems",                              type: "core", lecturesPerWeek: 4 },
+        { code: "S3CES2",   name: "Analog Electronic Circuits",                       type: "core", lecturesPerWeek: 3 },
+        { code: "S3CES1",   name: "Digital Electronic Circuits with Verilog",         type: "core", lecturesPerWeek: 4, labSessionsPerWeek: 1, labDurationSlots: 2 },
+        { code: "SHS01",    name: "Social Connect and Responsibilities",              type: "pe",   lecturesPerWeek: 1 },
+        { code: "S3ETA01",  name: "Arduino / Raspberry Pi Based Micro Projects",      type: "core", lecturesPerWeek: 1, labSessionsPerWeek: 1, labDurationSlots: 2 },
+        { code: "S3ETL01",  name: "Analog Electronic Circuits Laboratory",            type: "core", lecturesPerWeek: 0, labSessionsPerWeek: 1, labDurationSlots: 3 }
       ];
 
-      const demo3 = [
-        { name: "Digital Communication", teacher: "Dr. Raghav", type: "core", lecturesPerWeek: 3, labSessionsPerWeek: 1, labDurationSlots: 2 },
-        { name: "Microprocessors & Microcontrollers", teacher: "Dr. Kavya", type: "core", lecturesPerWeek: 3, labSessionsPerWeek: 1, labDurationSlots: 2 },
-        { name: "Antennas & Wave Propagation", teacher: "Dr. Naveen", type: "core", lecturesPerWeek: 3 },
-        { name: "Control Systems", teacher: "Prof. Shreya", type: "core", lecturesPerWeek: 3 },
-        { name: "Open Elective: IoT Fundamentals", teacher: "Dr. Neha", type: "oe", lecturesPerWeek: 3 },
-        { name: "VLSI Design", teacher: "Dr. Mehta", type: "core", lecturesPerWeek: 3, labSessionsPerWeek: 1, labDurationSlots: 3 },
-        { name: "Professional Elective: Embedded Systems", teacher: "Prof. Kiran", type: "pe", lecturesPerWeek: 3 },
-        { name: "Soft Skills & Aptitude", teacher: "Ms. Priya", type: "pe", lecturesPerWeek: 2 }
+      const demo5th = [
+        { code: "S5ETI01",  name: "Digital Signal Processing",                        type: "core", lecturesPerWeek: 4, labSessionsPerWeek: 1, labDurationSlots: 2 },
+        { code: "S5ETI02",  name: "Digital Communication and Coding Theory",          type: "core", lecturesPerWeek: 4 },
+        { code: "SHS03",    name: "Management and Entrepreneurship",                  type: "pe",   lecturesPerWeek: 3 },
+        { code: "SHS04",    name: "Research Methodology and IPR",                     type: "pe",   lecturesPerWeek: 3 },
+        { code: "SHS05",    name: "Environmental Studies",                            type: "pe",   lecturesPerWeek: 2 },
+        { code: "S5CES1",   name: "Digital VLSI Design",                              type: "core", lecturesPerWeek: 3, labSessionsPerWeek: 1, labDurationSlots: 2 },
+        { code: "S5ETL01",  name: "Advanced Communication Lab",                       type: "core", lecturesPerWeek: 0, labSessionsPerWeek: 1, labDurationSlots: 3 },
+        { code: "S5ETMP",   name: "Mini Project",                                     type: "core", lecturesPerWeek: 2, labSessionsPerWeek: 1, labDurationSlots: 2 }
       ];
 
-      const demo4 = [
-        { name: "Wireless Communication", teacher: "Dr. Arjun", type: "core", lecturesPerWeek: 3 },
-        { name: "Optical Fiber Communication", teacher: "Dr. Riya", type: "core", lecturesPerWeek: 3 },
-        { name: "Open Elective: Machine Learning", teacher: "Dr. Neha", type: "oe", lecturesPerWeek: 3 },
-        { name: "Professional Elective: 5G Networks", teacher: "Dr. Naveen", type: "pe", lecturesPerWeek: 3 },
-        { name: "Professional Elective: IoT Security", teacher: "Dr. Kavya", type: "pe", lecturesPerWeek: 3 },
-        { name: "Project Work", teacher: "Project Guide", type: "core", lecturesPerWeek: 2, labSessionsPerWeek: 1, labDurationSlots: 3 },
-        { name: "Seminar / Technical Writing", teacher: "Ms. Priya", type: "pe", lecturesPerWeek: 2 },
-        { name: "Career Skills", teacher: "Training Team", type: "pe", lecturesPerWeek: 2 }
+      const demo7th = [
+        { code: "S7ETI01",  name: "Wireless Communication",                           type: "core", lecturesPerWeek: 3 },
+        { code: "S7ETI02",  name: "Satellite and Radar Systems",                      type: "core", lecturesPerWeek: 3 },
+        { code: "S7ET01",   name: "Telecom Networks and Business Support Systems",    type: "core", lecturesPerWeek: 3 },
+        { code: "S7ETP",    name: "Major Project Phase II",                           type: "core", lecturesPerWeek: 2, labSessionsPerWeek: 1, labDurationSlots: 3 },
+        { code: "SETE24",   name: "Cyber Security",                                   type: "pe",   lecturesPerWeek: 3 },
+        { code: "OE74",     name: "Industrial Control & Automation",                  type: "oe",   lecturesPerWeek: 3 }
       ];
 
-      [demo2, demo3, demo4].forEach((demoArr, idx) => {
+      [demo3rd, demo5th, demo7th].forEach((demoArr, idx) => {
         const yearKey = YEARS[idx];
         const cards = cardsByYear[yearKey] || [];
         demoArr.forEach((subj, i) => {
@@ -980,14 +1027,16 @@
       });
     }
 
+    // ---------- Generate + log ----------
     generateBtn.addEventListener("click", () => {
       const subjects = readAllSubjects();
       if (subjects.length === 0) {
-        alert("Please fill subjects for at least one year.");
+        alert("Please fill subjects.");
         return;
       }
       const result = generateTimetables(subjects);
-      renderAllTimetables(result.timetable);
+      lastTimetable = result.timetable;
+      renderAllTimetables(lastTimetable);
 
       const logEl = document.getElementById("log");
       const lines = result.log.split("\n").map(line => {
@@ -998,12 +1047,88 @@
         return div.outerHTML;
       }).join("");
       logEl.innerHTML = lines || "No log.";
+      downloadBtn.style.display = "inline-flex";
     });
 
+    // ---------- Excel download (single sheet, row format) ----------
+    downloadBtn.addEventListener("click", () => {
+      if (!lastTimetable) {
+        alert("Generate the timetable first.");
+        return;
+      }
+
+      const aoa = [];
+      aoa.push(["semester", "day", "startTime", "endTime", "subjectCode", "room"]);
+
+      YEARS.forEach(yearKey => {
+        const ttYear = lastTimetable[yearKey];
+        if (!ttYear) return;
+
+        DAYS.forEach(day => {
+          const slots = ttYear[day];
+
+          let i = 0;
+          while (i < ROWS.length) {
+            const row = ROWS[i];
+
+            if (row.type === "break" || !isSlotAvailableOnDay(day, i)) {
+              i++;
+              continue;
+            }
+
+            const entry = slots[i];
+            if (!entry) {
+              i++;
+              continue;
+            }
+
+            let j = i;
+            while (
+              j + 1 < ROWS.length &&
+              isSlotAvailableOnDay(day, j + 1) &&
+              ROWS[j + 1].type === "class" &&
+              slots[j + 1] &&
+              slots[j + 1].subjectName === entry.subjectName &&
+              slots[j + 1].isLab === entry.isLab &&
+              slots[j + 1].teacher === entry.teacher
+            ) {
+              j++;
+            }
+
+            const startTime = ROWS[i].start;
+            const endTime   = ROWS[j].end;
+
+            const metaKey = `${yearKey}|${entry.subjectName}`;
+            const meta = (lastSubjectsMeta && lastSubjectsMeta[metaKey]) || {};
+            const subjectCode = meta.code || entry.subjectName;
+            const room = meta.room || "";
+
+            aoa.push([
+              SEM_NUMBER[yearKey],
+              DAY_FULL[day],
+              startTime,
+              endTime,
+              subjectCode,
+              room
+            ]);
+
+            i = j + 1;
+          }
+        });
+      });
+
+      const ws = XLSX.utils.aoa_to_sheet(aoa);
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, "Timetable");
+      XLSX.writeFile(wb, "Timetable_3_5_7.xlsx");
+    });
+
+    // ---------- Initial load ----------
     window.addEventListener("load", () => {
       refreshAllSubjectForms();
       populateExampleData();
-      generateBtn.click();
+      // You can comment out the next line if you don't want an auto example
+      // generateBtn.click();
     });
   </script>
 </body>
