@@ -1,0 +1,1010 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Multi-Year Timetable Generator</title>
+  <style>
+    :root {
+      --bg: #050816;
+      --card-bg: #0f172a;
+      --accent: #6366f1;
+      --accent-soft: rgba(99, 102, 241, 0.15);
+      --accent-2: #22c55e;
+      --accent-3: #f97316;
+      --border-subtle: rgba(148, 163, 184, 0.4);
+      --text-main: #e5e7eb;
+      --text-muted: #9ca3af;
+      --danger: #f97373;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      padding: 24px 12px 40px;
+      margin: 0;
+      background: radial-gradient(circle at top, #1e293b 0, #020617 55%, #000 100%);
+      color: var(--text-main);
+      display: flex;
+      justify-content: center;
+    }
+
+    h1 {
+      text-align: center;
+      margin-bottom: 4px;
+      font-size: 26px;
+      letter-spacing: 0.03em;
+    }
+    h1 span { color: var(--accent); }
+
+    h2, h3 {
+      margin-top: 16px;
+      margin-bottom: 8px;
+      font-weight: 600;
+      letter-spacing: 0.03em;
+    }
+
+    .subheading {
+      text-align: center;
+      font-size: 13px;
+      color: var(--text-muted);
+      margin-bottom: 16px;
+    }
+
+    .container {
+      max-width: 1200px;
+      width: 100%;
+      background: rgba(15, 23, 42, 0.96);
+      padding: 18px 20px 24px;
+      border-radius: 18px;
+      border: 1px solid rgba(148, 163, 184, 0.4);
+      box-shadow:
+        0 18px 45px rgba(15, 23, 42, 0.95),
+        0 0 0 1px rgba(15, 23, 42, 0.6);
+      backdrop-filter: blur(16px);
+    }
+
+    label {
+      font-size: 12px;
+      display: block;
+      margin-bottom: 4px;
+      color: var(--text-muted);
+    }
+
+    input, select {
+      padding: 8px 10px;
+      margin-bottom: 8px;
+      font-size: 13px;
+      width: 100%;
+      border-radius: 9px;
+      border: 1px solid var(--border-subtle);
+      background: rgba(15, 23, 42, 0.8);
+      color: var(--text-main);
+      outline: none;
+      transition: border 0.18s ease, box-shadow 0.18s ease, background 0.18s ease;
+    }
+
+    input:focus, select:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 1px rgba(99, 102, 241, 0.5);
+      background: rgba(15, 23, 42, 0.95);
+    }
+
+    input[disabled] {
+      opacity: 0.7;
+      cursor: default;
+      background: rgba(15, 23, 42, 0.6);
+    }
+
+    .row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      margin-bottom: 8px;
+    }
+
+    .col {
+      flex: 1;
+      min-width: 180px;
+    }
+
+    button {
+      padding: 8px 16px;
+      font-size: 13px;
+      cursor: pointer;
+      margin: 10px 6px 14px 0;
+      border-radius: 999px;
+      border: 1px solid transparent;
+      background: linear-gradient(135deg, var(--accent), #4f46e5);
+      color: #f9fafb;
+      font-weight: 500;
+      letter-spacing: 0.03em;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      transition: transform 0.12s ease, box-shadow 0.12s ease, background 0.18s ease, opacity 0.12s ease;
+    }
+
+    button.secondary {
+      background: transparent;
+      border-color: var(--border-subtle);
+      color: var(--text-main);
+    }
+
+    button:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 10px 25px rgba(15, 23, 42, 0.6);
+      opacity: 0.96;
+    }
+
+    button:active {
+      transform: translateY(0px) scale(0.98);
+      box-shadow: none;
+      opacity: 0.9;
+    }
+
+    button span.btn-icon { font-size: 14px; }
+
+    .year-block {
+      border-radius: 14px;
+      padding: 10px 12px 14px;
+      margin-top: 10px;
+      background: radial-gradient(circle at top left, rgba(99,102,241,0.12), transparent 55%);
+      border: 1px solid rgba(148, 163, 184, 0.35);
+    }
+    .year-block:nth-of-type(2) {
+      background: radial-gradient(circle at top left, rgba(34,197,94,0.12), transparent 55%);
+    }
+    .year-block:nth-of-type(3) {
+      background: radial-gradient(circle at top left, rgba(249,115,22,0.12), transparent 55%);
+    }
+
+    .year-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 8px;
+    }
+
+    .year-header h3 {
+      margin: 0;
+      font-size: 15px;
+      text-transform: uppercase;
+      letter-spacing: 0.09em;
+      color: var(--text-main);
+    }
+
+    .year-pill {
+      font-size: 11px;
+      padding: 3px 9px;
+      border-radius: 999px;
+      background: rgba(15,23,42,0.7);
+      border: 1px solid rgba(148, 163, 184, 0.5);
+      color: var(--text-muted);
+    }
+
+    .subject-card {
+      border-radius: 12px;
+      padding: 10px 12px;
+      margin-bottom: 10px;
+      background: rgba(15, 23, 42, 0.9);
+      border: 1px solid rgba(30, 64, 175, 0.6);
+      box-shadow: 0 8px 18px rgba(15, 23, 42, 0.8);
+      position: relative;
+    }
+
+    .subject-card::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      border-radius: 12px;
+      border: 1px solid rgba(125, 211, 252, 0.1);
+      pointer-events: none;
+    }
+
+    .subject-title {
+      font-weight: 600;
+      font-size: 13px;
+      margin-bottom: 6px;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      color: var(--text-muted);
+    }
+
+    .lab-extra {
+      margin-top: 4px;
+      padding-top: 6px;
+      border-top: 1px dashed rgba(148, 163, 184, 0.4);
+      background: rgba(15, 23, 42, 0.7);
+      border-radius: 8px;
+      margin-left: -4px;
+      margin-right: -4px;
+      padding-left: 8px;
+      padding-right: 8px;
+    }
+
+    .checkbox-line {
+      margin-top: 4px;
+      font-size: 12px;
+      color: var(--text-muted);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .checkbox-line input {
+      width: auto;
+      margin: 0;
+      accent-color: var(--accent);
+    }
+
+    .note {
+      font-size: 12px;
+      color: var(--text-muted);
+      margin-top: 4px;
+    }
+    .note ul {
+      padding-left: 18px;
+      margin: 4px 0 0;
+    }
+    .note li {
+      margin-bottom: 2px;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 10px;
+      font-size: 11.5px;
+      border-radius: 12px;
+      overflow: hidden;
+      background: rgba(15, 23, 42, 0.9);
+      border: 1px solid rgba(30, 64, 175, 0.7);
+      box-shadow: 0 12px 30px rgba(15, 23, 42, 0.9);
+    }
+
+    th, td {
+      border: 1px solid rgba(30, 64, 175, 0.5);
+      text-align: center;
+      padding: 6px 4px;
+    }
+
+    th {
+      background: linear-gradient(135deg, rgba(15, 23, 42, 0.95), rgba(30, 64, 175, 0.7));
+      font-weight: 600;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      font-size: 10.5px;
+      color: #e5e7eb;
+    }
+
+    th:first-child {
+      position: sticky;
+      left: 0;
+      z-index: 2;
+      background: linear-gradient(135deg, rgba(15, 23, 42, 0.98), rgba(15, 23, 42, 0.98));
+    }
+
+    td:first-child {
+      position: sticky;
+      left: 0;
+      z-index: 1;
+      background: rgba(15, 23, 42, 0.98);
+      font-weight: 500;
+      color: var(--text-muted);
+      width: 105px;
+    }
+
+    .slot-empty {
+      background: rgba(15, 23, 42, 0.85);
+      color: rgba(148, 163, 184, 0.65);
+    }
+
+    .slot-na {
+      background: rgba(15, 23, 42, 0.75);
+      color: rgba(148, 163, 184, 0.4);
+      font-style: italic;
+    }
+
+    .slot-break {
+      background: rgba(248, 113, 113, 0.16);
+      color: #fecaca;
+      font-weight: 600;
+      font-size: 10px;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+    }
+
+    .subject-pill {
+      display: inline-block;
+      padding: 4px 6px;
+      border-radius: 8px;
+      font-size: 11px;
+      line-height: 1.3;
+      white-space: pre-line;
+      border: 1px solid rgba(148, 163, 184, 0.4);
+    }
+
+    .subject-core { background: rgba(59, 130, 246, 0.16); }
+    .subject-oe   { background: rgba(34, 197, 94, 0.16); }
+    .subject-pe   { background: rgba(249, 115, 22, 0.18); }
+
+    .subject-lab {
+      box-shadow: 0 0 0 1px rgba(234, 179, 8, 0.6) inset;
+    }
+
+    .tt-year-wrapper {
+      margin-top: 18px;
+      margin-bottom: 14px;
+      padding-top: 10px;
+      border-top: 1px dashed rgba(148, 163, 184, 0.4);
+    }
+
+    .tt-year-wrapper h3 {
+      margin-bottom: 6px;
+      font-size: 14px;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+    }
+
+    #log {
+      margin-top: 16px;
+      font-size: 11.5px;
+      white-space: pre-wrap;
+      background: rgba(15, 23, 42, 0.9);
+      padding: 10px 12px;
+      border-radius: 10px;
+      border: 1px solid rgba(30, 64, 175, 0.7);
+      max-height: 260px;
+      overflow-y: auto;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+    }
+    .log-line-error { color: var(--danger); }
+    .log-line-ok    { color: #a5f3fc; }
+
+    .time-structure {
+      font-size: 12px;
+      padding: 8px 10px;
+      border-radius: 10px;
+      background: rgba(15, 23, 42, 0.9);
+      border: 1px solid rgba(148, 163, 184, 0.4);
+      margin-bottom: 10px;
+    }
+
+    @media (max-width: 900px) {
+      .container { padding: 14px 12px 20px; }
+      th:first-child, td:first-child { position: static; }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Timetable Generator <span>3 Years</span></h1>
+    <div class="subheading">
+      Auto-arranges 2nd, 3rd, and 4th year timetables with no teacher overlaps and OE / lab rules.
+    </div>
+
+    <div class="time-structure">
+      <b>Time structure</b><br />
+      <b>Mon–Fri:</b> 8–9, 9–10, 10–10:30 (break), 10:30–11:30, 11:30–12:30, 12:30–2 (lunch), 2–3, 3–4, 4–5<br />
+      <b>Saturday:</b> 8–9, 9–10, 10–10:30 (break), 10:30–11:30, 11:30–12:30 (no afternoon).
+      <div class="note">
+        Rules:
+        <ul>
+          <li>Open Elective (OE) only on <b>Mon/Wed/Fri 8–9 AM</b>.</li>
+          <li>Labs only in <b>afternoon (2–5 PM) Mon–Fri</b>, continuous block (1–3 hours).</li>
+          <li>Same teacher: <b>no overlapping classes</b> across years and <b>no back-to-back slots</b>.</li>
+          <li>Checkbox: allow / disallow <b>same subject twice in a day</b>.</li>
+        </ul>
+      </div>
+    </div>
+
+    <h2>Year Configuration (8 subjects per year)</h2>
+
+    <div class="year-block">
+      <div class="year-header">
+        <h3>2nd Year</h3>
+        <span class="year-pill">8 subjects · 3 to 6 hrs / week each (you decide)</span>
+      </div>
+      <div class="row">
+        <div class="col">
+          <label for="year2Name">Display name:</label>
+          <input id="year2Name" type="text" value="2nd Year ETE" />
+        </div>
+        <div class="col">
+          <label>Subjects count:</label>
+          <input type="text" value="8 (fixed)" disabled />
+        </div>
+      </div>
+      <div id="subjectsContainer2"></div>
+    </div>
+
+    <div class="year-block">
+      <div class="year-header">
+        <h3>3rd Year</h3>
+        <span class="year-pill">8 subjects · with labs / OE / PE</span>
+      </div>
+      <div class="row">
+        <div class="col">
+          <label for="year3Name">Display name:</label>
+          <input id="year3Name" type="text" value="3rd Year ETE" />
+        </div>
+        <div class="col">
+          <label>Subjects count:</label>
+          <input type="text" value="8 (fixed)" disabled />
+        </div>
+      </div>
+      <div id="subjectsContainer3"></div>
+    </div>
+
+    <div class="year-block">
+      <div class="year-header">
+        <h3>4th Year</h3>
+        <span class="year-pill">8 subjects · project / OE / PE</span>
+      </div>
+      <div class="row">
+        <div class="col">
+          <label for="year4Name">Display name:</label>
+          <input id="year4Name" type="text" value="4th Year ETE" />
+        </div>
+        <div class="col">
+          <label>Subjects count:</label>
+          <input type="text" value="8 (fixed)" disabled />
+        </div>
+      </div>
+      <div id="subjectsContainer4"></div>
+    </div>
+
+    <button id="refreshBtn" class="secondary">
+      <span class="btn-icon">🔁</span> Refresh Subject Forms
+    </button>
+    <button id="generateBtn">
+      <span class="btn-icon">⚡</span> Generate Timetables (All 3 Years)
+    </button>
+
+    <div id="timetableContainer"></div>
+
+    <h3>Generation Log</h3>
+    <div id="log"></div>
+  </div>
+
+  <script>
+    const SUBJECTS_PER_YEAR = 8;
+    const DAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+    const YEARS = ["2nd", "3rd", "4th"];
+
+    const ROWS = [
+      { id: "8-9",         label: "8:00 - 9:00",    type: "class", period: "morning" },
+      { id: "9-10",        label: "9:00 - 10:00",   type: "class", period: "morning" },
+      { id: "10-10:30",    label: "10:00 - 10:30",  type: "break" },
+      { id: "10:30-11:30", label: "10:30 - 11:30",  type: "class", period: "morning" },
+      { id: "11:30-12:30", label: "11:30 - 12:30",  type: "class", period: "morning" },
+      { id: "12:30-2",     label: "12:30 - 2:00",   type: "break" },
+      { id: "2-3",         label: "2:00 - 3:00",    type: "class", period: "afternoon" },
+      { id: "3-4",         label: "3:00 - 4:00",    type: "class", period: "afternoon" },
+      { id: "4-5",         label: "4:00 - 5:00",    type: "class", period: "afternoon" }
+    ];
+
+    function isSlotAvailableOnDay(day, rowIndex) {
+      if (day === "Sat") return rowIndex <= 4;
+      return true;
+    }
+
+    const refreshBtn = document.getElementById("refreshBtn");
+    const generateBtn = document.getElementById("generateBtn");
+
+    function buildSubjectFormsForYear(yearKey, containerId) {
+      const container = document.getElementById(containerId);
+      container.innerHTML = "";
+
+      for (let i = 1; i <= SUBJECTS_PER_YEAR; i++) {
+        const card = document.createElement("div");
+        card.className = "subject-card";
+        card.dataset.year = yearKey;
+
+        const title = document.createElement("div");
+        title.className = "subject-title";
+        title.textContent = `${yearKey} Year · Subject ${i}`;
+        card.appendChild(title);
+
+        const row1 = document.createElement("div");
+        row1.className = "row";
+
+        const colName = document.createElement("div");
+        colName.className = "col";
+        colName.innerHTML = `
+          <label>Subject Name:</label>
+          <input type="text" class="sub-name" placeholder="e.g., DSP, OE-1, VLSI" />
+        `;
+
+        const colTeacher = document.createElement("div");
+        colTeacher.className = "col";
+        colTeacher.innerHTML = `
+          <label>Teacher Name:</label>
+          <input type="text" class="sub-teacher" placeholder="e.g., Dr. XYZ" />
+        `;
+
+        row1.appendChild(colName);
+        row1.appendChild(colTeacher);
+
+        const row2 = document.createElement("div");
+        row2.className = "row";
+
+        const colType = document.createElement("div");
+        colType.className = "col";
+        colType.innerHTML = `
+          <label>Type:</label>
+          <select class="sub-type">
+            <option value="core">Core</option>
+            <option value="oe">Open Elective</option>
+            <option value="pe">Professional Elective</option>
+          </select>
+        `;
+
+        const colLect = document.createElement("div");
+        colLect.className = "col";
+        colLect.innerHTML = `
+          <label>Lectures per week:</label>
+          <input type="number" class="sub-lectures" min="0" max="20" value="3" />
+        `;
+
+        row2.appendChild(colType);
+        row2.appendChild(colLect);
+
+        const row3 = document.createElement("div");
+        row3.className = "row";
+
+        const colLabFlag = document.createElement("div");
+        colLabFlag.className = "col";
+        colLabFlag.innerHTML = `
+          <label>Integrated Lab?</label>
+          <select class="sub-has-lab">
+            <option value="no">No</option>
+            <option value="yes">Yes</option>
+          </select>
+        `;
+
+        const colTwice = document.createElement("div");
+        colTwice.className = "col";
+        colTwice.innerHTML = `
+          <label>&nbsp;</label>
+          <div class="checkbox-line">
+            <input type="checkbox" class="sub-allow-twice" />
+            Allow this subject twice in a day
+          </div>
+        `;
+
+        row3.appendChild(colLabFlag);
+        row3.appendChild(colTwice);
+
+        const labExtra = document.createElement("div");
+        labExtra.className = "lab-extra";
+        labExtra.style.display = "none";
+        labExtra.innerHTML = `
+          <div class="row">
+            <div class="col">
+              <label>Lab sessions per week:</label>
+              <input type="number" class="sub-labs-per-week" min="1" max="10" value="1" />
+            </div>
+            <div class="col">
+              <label>Lab duration (hours):</label>
+              <select class="sub-lab-duration">
+                <option value="1">1 hour</option>
+                <option value="2" selected>2 hours</option>
+                <option value="3">3 hours</option>
+              </select>
+            </div>
+          </div>
+          <div class="note">
+            Labs will be placed in afternoon (2–5 PM, Mon–Fri) as continuous blocks.
+          </div>
+        `;
+
+        colLabFlag.querySelector(".sub-has-lab").addEventListener("change", (e) => {
+          labExtra.style.display = e.target.value === "yes" ? "block" : "none";
+        });
+
+        card.appendChild(row1);
+        card.appendChild(row2);
+        card.appendChild(row3);
+        card.appendChild(labExtra);
+
+        container.appendChild(card);
+      }
+    }
+
+    function refreshAllSubjectForms() {
+      buildSubjectFormsForYear("2nd", "subjectsContainer2");
+      buildSubjectFormsForYear("3rd", "subjectsContainer3");
+      buildSubjectFormsForYear("4th", "subjectsContainer4");
+    }
+
+    refreshBtn.addEventListener("click", () => {
+      refreshAllSubjectForms();
+      populateExampleData();
+    });
+
+    function readAllSubjects() {
+      const cards = document.querySelectorAll(".subject-card");
+      const subjects = [];
+      cards.forEach(card => {
+        const year = card.dataset.year;
+        const name = (card.querySelector(".sub-name").value || "").trim() || "Unnamed";
+        const teacher = (card.querySelector(".sub-teacher").value || "").trim() || "Unknown";
+        const type = card.querySelector(".sub-type").value;
+        const lecturesPerWeek = parseInt(card.querySelector(".sub-lectures").value || "0", 10);
+
+        const hasLab = card.querySelector(".sub-has-lab").value === "yes";
+        let labSessionsPerWeek = 0;
+        let labDurationSlots = 0;
+        if (hasLab) {
+          labSessionsPerWeek = parseInt(card.querySelector(".sub-labs-per-week").value || "0", 10);
+          labDurationSlots = parseInt(card.querySelector(".sub-lab-duration").value || "0", 10);
+        }
+
+        const allowTwicePerDay = card.querySelector(".sub-allow-twice").checked;
+
+        subjects.push({
+          year,
+          name,
+          teacher,
+          type,
+          lecturesPerWeek,
+          labSessionsPerWeek,
+          labDurationSlots,
+          allowTwicePerDay
+        });
+      });
+      return subjects;
+    }
+
+    function generateTimetables(subjects) {
+      const logLines = [];
+
+      const timetable = {};
+      YEARS.forEach(year => {
+        timetable[year] = {};
+        DAYS.forEach(day => {
+          timetable[year][day] = new Array(ROWS.length).fill(null);
+        });
+      });
+
+      const teacherBusy = {};
+      function isTeacherBusy(teacher, day, rowIndex) {
+        return teacherBusy[teacher] &&
+               teacherBusy[teacher][day] &&
+               teacherBusy[teacher][day][rowIndex];
+      }
+      function setTeacherBusy(teacher, day, rowIndex) {
+        if (!teacherBusy[teacher]) teacherBusy[teacher] = {};
+        if (!teacherBusy[teacher][day]) teacherBusy[teacher][day] = {};
+        teacherBusy[teacher][day][rowIndex] = true;
+      }
+
+      const subjectPerDay = {};
+      YEARS.forEach(year => {
+        subjectPerDay[year] = {};
+        DAYS.forEach(day => {
+          subjectPerDay[year][day] = {};
+        });
+      });
+
+      function findLabCandidates(subject) {
+        const candidates = [];
+        const year = subject.year;
+        DAYS.forEach(day => {
+          if (day === "Sat") return;
+          for (let rowIndex = 0; rowIndex < ROWS.length; rowIndex++) {
+            const row = ROWS[rowIndex];
+            if (!isSlotAvailableOnDay(day, rowIndex)) continue;
+            if (row.type !== "class" || row.period !== "afternoon") continue;
+
+            let ok = true;
+            for (let k = 0; k < subject.labDurationSlots; k++) {
+              const idx = rowIndex + k;
+              if (idx >= ROWS.length) { ok = false; break; }
+              if (!isSlotAvailableOnDay(day, idx)) { ok = false; break; }
+              const r = ROWS[idx];
+              if (r.type !== "class" || r.period !== "afternoon") { ok = false; break; }
+              if (timetable[year][day][idx] !== null) { ok = false; break; }
+              if (isTeacherBusy(subject.teacher, day, idx)) { ok = false; break; }
+            }
+
+            const beforeIdx = rowIndex - 1;
+            const afterIdx  = rowIndex + subject.labDurationSlots;
+            if (beforeIdx >= 0 && ROWS[beforeIdx].type === "class") {
+              if (isTeacherBusy(subject.teacher, day, beforeIdx)) ok = false;
+            }
+            if (afterIdx < ROWS.length && ROWS[afterIdx].type === "class") {
+              if (isTeacherBusy(subject.teacher, day, afterIdx)) ok = false;
+            }
+
+            if (ok) {
+              candidates.push({ year, day, startRowIndex: rowIndex });
+            }
+          }
+        });
+        return candidates;
+      }
+
+      subjects.forEach(subject => {
+        if (!subject.labSessionsPerWeek || !subject.labDurationSlots) return;
+
+        for (let s = 0; s < subject.labSessionsPerWeek; s++) {
+          const candidates = findLabCandidates(subject);
+          if (candidates.length === 0) {
+            logLines.push(`⚠️ [LAB] Could not place lab for "${subject.name}" (${subject.year}, ${subject.teacher}) session ${s+1}/${subject.labSessionsPerWeek}.`);
+            continue;
+          }
+          const choice = candidates[Math.floor(Math.random() * candidates.length)];
+          for (let k = 0; k < subject.labDurationSlots; k++) {
+            const idx = choice.startRowIndex + k;
+            timetable[choice.year][choice.day][idx] = {
+              subjectName: subject.name,
+              type: subject.type,
+              isLab: true,
+              teacher: subject.teacher,
+              year: subject.year
+            };
+            setTeacherBusy(subject.teacher, choice.day, idx);
+          }
+          logLines.push(`✅ [LAB] "${subject.name}" (${subject.year}, ${subject.teacher}) on ${choice.day} at ${ROWS[choice.startRowIndex].label} for ${subject.labDurationSlots} hour(s).`);
+        }
+      });
+
+      function findLectureCandidates(subject) {
+        const candidates = [];
+        const year = subject.year;
+        DAYS.forEach(day => {
+          for (let rowIndex = 0; rowIndex < ROWS.length; rowIndex++) {
+            if (!isSlotAvailableOnDay(day, rowIndex)) continue;
+            const row = ROWS[rowIndex];
+            if (row.type !== "class") continue;
+
+            if (subject.type === "oe") {
+              if (!["Mon", "Wed", "Fri"].includes(day)) continue;
+              if (row.id !== "8-9") continue;
+            }
+
+            if (timetable[year][day][rowIndex] !== null) continue;
+            if (isTeacherBusy(subject.teacher, day, rowIndex)) continue;
+
+            const prevIdx = rowIndex - 1;
+            const nextIdx = rowIndex + 1;
+            if (prevIdx >= 0 && ROWS[prevIdx].type === "class" &&
+                isTeacherBusy(subject.teacher, day, prevIdx)) continue;
+            if (nextIdx < ROWS.length && ROWS[nextIdx].type === "class" &&
+                isTeacherBusy(subject.teacher, day, nextIdx)) continue;
+
+            const currentCount = subjectPerDay[year][day][subject.name] || 0;
+            if (!subject.allowTwicePerDay && currentCount >= 1) continue;
+
+            candidates.push({ year, day, rowIndex });
+          }
+        });
+        return candidates;
+      }
+
+      subjects.forEach(subject => {
+        for (let s = 0; s < subject.lecturesPerWeek; s++) {
+          const candidates = findLectureCandidates(subject);
+          if (candidates.length === 0) {
+            logLines.push(`⚠️ [LECTURE] Could not place lecture for "${subject.name}" (${subject.year}, ${subject.teacher}) class ${s+1}/${subject.lecturesPerWeek}.`);
+            continue;
+          }
+          const choice = candidates[Math.floor(Math.random() * candidates.length)];
+          timetable[choice.year][choice.day][choice.rowIndex] = {
+            subjectName: subject.name,
+            type: subject.type,
+            isLab: false,
+            teacher: subject.teacher,
+            year: subject.year
+          };
+          setTeacherBusy(subject.teacher, choice.day, choice.rowIndex);
+
+          const year = choice.year;
+          const day = choice.day;
+          if (!subjectPerDay[year][day][subject.name]) {
+            subjectPerDay[year][day][subject.name] = 0;
+          }
+          subjectPerDay[year][day][subject.name]++;
+
+          logLines.push(`✅ [LECTURE] "${subject.name}" (${subject.year}, ${subject.teacher}) on ${choice.day} at ${ROWS[choice.rowIndex].label}.`);
+        }
+      });
+
+      return { timetable, log: logLines.join("\n") };
+    }
+
+    function createTableForYear(yearKey, yearLabel, timetableForYear) {
+      const wrapper = document.createElement("div");
+      wrapper.className = "tt-year-wrapper";
+
+      const h = document.createElement("h3");
+      h.textContent = yearLabel || (yearKey + " Year");
+      wrapper.appendChild(h);
+
+      const table = document.createElement("table");
+
+      const thead = document.createElement("thead");
+      const headerRow = document.createElement("tr");
+      const thEmpty = document.createElement("th");
+      thEmpty.textContent = "Time / Day";
+      headerRow.appendChild(thEmpty);
+
+      DAYS.forEach(day => {
+        const th = document.createElement("th");
+        th.textContent = day;
+        headerRow.appendChild(th);
+      });
+      thead.appendChild(headerRow);
+      table.appendChild(thead);
+
+      const tbody = document.createElement("tbody");
+
+      ROWS.forEach((row, rowIndex) => {
+        const tr = document.createElement("tr");
+
+        const timeTd = document.createElement("td");
+        timeTd.textContent = row.label;
+        tr.appendChild(timeTd);
+
+        DAYS.forEach(day => {
+          const td = document.createElement("td");
+
+          if (row.type === "break") {
+            td.textContent = row.id === "12:30-2" ? "Lunch Break" : "Break";
+            td.className = "slot-break";
+            tr.appendChild(td);
+            return;
+          }
+
+          if (!isSlotAvailableOnDay(day, rowIndex)) {
+            td.textContent = "N/A";
+            td.className = "slot-na";
+            tr.appendChild(td);
+            return;
+          }
+
+          const entry = timetableForYear[day][rowIndex];
+          if (!entry) {
+            td.textContent = "-";
+            td.className = "slot-empty";
+          } else {
+            const span = document.createElement("span");
+            span.textContent =
+              entry.subjectName +
+              (entry.isLab ? " (Lab)" : "") +
+              "\n[" + entry.teacher + "]";
+            span.classList.add("subject-pill");
+            if (entry.type === "core") span.classList.add("subject-core");
+            if (entry.type === "oe") span.classList.add("subject-oe");
+            if (entry.type === "pe") span.classList.add("subject-pe");
+            if (entry.isLab) span.classList.add("subject-lab");
+            td.appendChild(span);
+          }
+
+          tr.appendChild(td);
+        });
+
+        tbody.appendChild(tr);
+      });
+
+      table.appendChild(tbody);
+      wrapper.appendChild(table);
+      return wrapper;
+    }
+
+    function renderAllTimetables(timetable) {
+      const container = document.getElementById("timetableContainer");
+      container.innerHTML = "";
+
+      const yearLabels = {
+        "2nd": document.getElementById("year2Name").value.trim() || "2nd Year",
+        "3rd": document.getElementById("year3Name").value.trim() || "3rd Year",
+        "4th": document.getElementById("year4Name").value.trim() || "4th Year"
+      };
+
+      YEARS.forEach(yearKey => {
+        const ttYear = timetable[yearKey];
+        if (!ttYear) return;
+        const tableBlock = createTableForYear(yearKey, yearLabels[yearKey], ttYear);
+        container.appendChild(tableBlock);
+      });
+    }
+
+    function assignSubject(card, config) {
+      card.querySelector(".sub-name").value = config.name;
+      card.querySelector(".sub-teacher").value = config.teacher;
+      card.querySelector(".sub-type").value = config.type;
+      card.querySelector(".sub-lectures").value = config.lecturesPerWeek;
+
+      const hasLabSelect = card.querySelector(".sub-has-lab");
+      if (config.labSessionsPerWeek && config.labDurationSlots) {
+        hasLabSelect.value = "yes";
+        hasLabSelect.dispatchEvent(new Event("change"));
+        card.querySelector(".sub-labs-per-week").value = config.labSessionsPerWeek;
+        card.querySelector(".sub-lab-duration").value = String(config.labDurationSlots);
+      } else {
+        hasLabSelect.value = "no";
+        hasLabSelect.dispatchEvent(new Event("change"));
+      }
+
+      card.querySelector(".sub-allow-twice").checked = !!config.allowTwicePerDay;
+    }
+
+    function populateExampleData() {
+      const allCards = document.querySelectorAll(".subject-card");
+      const cardsByYear = { "2nd": [], "3rd": [], "4th": [] };
+      allCards.forEach(c => cardsByYear[c.dataset.year].push(c));
+
+      const demo2 = [
+        { name: "Applied Mathematics-II", teacher: "Dr. Rao", type: "core", lecturesPerWeek: 4 },
+        { name: "Basic Electronics", teacher: "Dr. Mehta", type: "core", lecturesPerWeek: 3, labSessionsPerWeek: 1, labDurationSlots: 2 },
+        { name: "Digital Logic Design", teacher: "Prof. Kiran", type: "core", lecturesPerWeek: 3, labSessionsPerWeek: 1, labDurationSlots: 2 },
+        { name: "Data Structures", teacher: "Prof. Ananya", type: "core", lecturesPerWeek: 3, labSessionsPerWeek: 1, labDurationSlots: 2 },
+        { name: "Open Elective: Python Basics", teacher: "Dr. Neha", type: "oe", lecturesPerWeek: 3 },
+        { name: "Signals & Systems", teacher: "Dr. Riya", type: "core", lecturesPerWeek: 3 },
+        { name: "Communication Theory", teacher: "Dr. Arjun", type: "core", lecturesPerWeek: 3 },
+        { name: "Professional Communication", teacher: "Ms. Priya", type: "pe", lecturesPerWeek: 2 }
+      ];
+
+      const demo3 = [
+        { name: "Digital Communication", teacher: "Dr. Raghav", type: "core", lecturesPerWeek: 3, labSessionsPerWeek: 1, labDurationSlots: 2 },
+        { name: "Microprocessors & Microcontrollers", teacher: "Dr. Kavya", type: "core", lecturesPerWeek: 3, labSessionsPerWeek: 1, labDurationSlots: 2 },
+        { name: "Antennas & Wave Propagation", teacher: "Dr. Naveen", type: "core", lecturesPerWeek: 3 },
+        { name: "Control Systems", teacher: "Prof. Shreya", type: "core", lecturesPerWeek: 3 },
+        { name: "Open Elective: IoT Fundamentals", teacher: "Dr. Neha", type: "oe", lecturesPerWeek: 3 },
+        { name: "VLSI Design", teacher: "Dr. Mehta", type: "core", lecturesPerWeek: 3, labSessionsPerWeek: 1, labDurationSlots: 3 },
+        { name: "Professional Elective: Embedded Systems", teacher: "Prof. Kiran", type: "pe", lecturesPerWeek: 3 },
+        { name: "Soft Skills & Aptitude", teacher: "Ms. Priya", type: "pe", lecturesPerWeek: 2 }
+      ];
+
+      const demo4 = [
+        { name: "Wireless Communication", teacher: "Dr. Arjun", type: "core", lecturesPerWeek: 3 },
+        { name: "Optical Fiber Communication", teacher: "Dr. Riya", type: "core", lecturesPerWeek: 3 },
+        { name: "Open Elective: Machine Learning", teacher: "Dr. Neha", type: "oe", lecturesPerWeek: 3 },
+        { name: "Professional Elective: 5G Networks", teacher: "Dr. Naveen", type: "pe", lecturesPerWeek: 3 },
+        { name: "Professional Elective: IoT Security", teacher: "Dr. Kavya", type: "pe", lecturesPerWeek: 3 },
+        { name: "Project Work", teacher: "Project Guide", type: "core", lecturesPerWeek: 2, labSessionsPerWeek: 1, labDurationSlots: 3 },
+        { name: "Seminar / Technical Writing", teacher: "Ms. Priya", type: "pe", lecturesPerWeek: 2 },
+        { name: "Career Skills", teacher: "Training Team", type: "pe", lecturesPerWeek: 2 }
+      ];
+
+      [demo2, demo3, demo4].forEach((demoArr, idx) => {
+        const yearKey = YEARS[idx];
+        const cards = cardsByYear[yearKey] || [];
+        demoArr.forEach((subj, i) => {
+          if (cards[i]) assignSubject(cards[i], subj);
+        });
+      });
+    }
+
+    generateBtn.addEventListener("click", () => {
+      const subjects = readAllSubjects();
+      if (subjects.length === 0) {
+        alert("Please fill subjects for at least one year.");
+        return;
+      }
+      const result = generateTimetables(subjects);
+      renderAllTimetables(result.timetable);
+
+      const logEl = document.getElementById("log");
+      const lines = result.log.split("\n").map(line => {
+        const div = document.createElement("div");
+        div.textContent = line;
+        if (line.startsWith("⚠️")) div.className = "log-line-error";
+        if (line.startsWith("✅")) div.className = "log-line-ok";
+        return div.outerHTML;
+      }).join("");
+      logEl.innerHTML = lines || "No log.";
+    });
+
+    window.addEventListener("load", () => {
+      refreshAllSubjectForms();
+      populateExampleData();
+      generateBtn.click();
+    });
+  </script>
+</body>
+</html>
